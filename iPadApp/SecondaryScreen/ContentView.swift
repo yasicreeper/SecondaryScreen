@@ -256,7 +256,6 @@ struct ScreenDisplayView: View {
     @EnvironmentObject var connectionManager: ConnectionManager
     @State private var showDisconnectButton = true
     @State private var hideButtonTimer: Timer?
-    @State private var showDebugConsole = false
     
     var body: some View {
         ZStack {
@@ -268,18 +267,90 @@ struct ScreenDisplayView: View {
                     .aspectRatio(contentMode: .fit)
                     .edgesIgnoringSafeArea(.all)
             } else {
-                VStack {
-                    ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                        .scaleEffect(2)
-                    Text("Waiting for screen data...")
-                        .foregroundColor(.white)
-                        .padding(.top, 20)
+                // Show debug console directly when waiting for data
+                VStack(spacing: 0) {
+                    // Header
+                    HStack {
+                        VStack(alignment: .leading) {
+                            Text("Waiting for screen data...")
+                                .font(.headline)
+                                .foregroundColor(.white)
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                .scaleEffect(0.8)
+                        }
+                        Spacer()
+                        Button(action: {
+                            connectionManager.disconnect()
+                        }) {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.title2)
+                                .foregroundColor(.white)
+                        }
+                    }
+                    .padding()
+                    .background(Color.blue.opacity(0.3))
+                    
+                    // Debug console embedded
+                    ScrollView {
+                        ScrollViewReader { proxy in
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(connectionManager.debugLogger.logs)
+                                    .font(.system(size: 10, design: .monospaced))
+                                    .foregroundColor(.green)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(10)
+                                    .id("bottom")
+                            }
+                            .onChange(of: connectionManager.debugLogger.logs) { _ in
+                                withAnimation {
+                                    proxy.scrollTo("bottom", anchor: .bottom)
+                                }
+                            }
+                        }
+                    }
+                    .background(Color.black)
+                    
+                    // Control buttons
+                    HStack(spacing: 15) {
+                        Button(action: {
+                            connectionManager.debugLogger.clear()
+                        }) {
+                            HStack {
+                                Image(systemName: "trash")
+                                Text("Clear")
+                            }
+                            .font(.caption)
+                            .frame(maxWidth: .infinity)
+                            .padding(8)
+                            .background(Color.red.opacity(0.8))
+                            .foregroundColor(.white)
+                            .cornerRadius(8)
+                        }
+                        
+                        Button(action: {
+                            UIPasteboard.general.string = connectionManager.debugLogger.logs
+                        }) {
+                            HStack {
+                                Image(systemName: "doc.on.clipboard")
+                                Text("Copy")
+                            }
+                            .font(.caption)
+                            .frame(maxWidth: .infinity)
+                            .padding(8)
+                            .background(Color.blue.opacity(0.8))
+                            .foregroundColor(.white)
+                            .cornerRadius(8)
+                        }
+                    }
+                    .padding(10)
+                    .background(Color(UIColor.systemGray6))
                 }
+                .edgesIgnoringSafeArea(.bottom)
             }
             
-            // Disconnect and Debug Console buttons - ALWAYS VISIBLE when waiting for data
-            if showDisconnectButton || connectionManager.currentFrame == nil {
+            // Disconnect button - only show when frames are displaying
+            if showDisconnectButton && connectionManager.currentFrame != nil {
                 VStack {
                     HStack {
                         Button(action: {
@@ -296,20 +367,6 @@ struct ScreenDisplayView: View {
                         .padding()
                         
                         Spacer()
-                        
-                        // Debug console button - always visible when waiting
-                        Button(action: {
-                            showDebugConsole = true
-                        }) {
-                            Image(systemName: "terminal")
-                                .font(.title)
-                                .foregroundColor(.white)
-                                .padding()
-                                .background(Color.green.opacity(0.9))
-                                .clipShape(Circle())
-                                .shadow(radius: 5)
-                        }
-                        .padding()
                     }
                     Spacer()
                 }
@@ -324,10 +381,6 @@ struct ScreenDisplayView: View {
         }
         .onAppear {
             resetHideTimer()
-        }
-        .fullScreenCover(isPresented: $showDebugConsole) {
-            DebugConsoleView(isPresented: $showDebugConsole)
-                .environmentObject(connectionManager)
         }
     }
     
