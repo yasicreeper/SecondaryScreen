@@ -1,0 +1,520 @@
+workflows:
+  # ============================================
+  # iPad App - Unsigned IPA for Sideloading
+  # ============================================
+  ipad-unsigned-workflow:
+    name: Secondary Screen iPad (Unsigned IPA)
+    max_build_duration: 60
+    instance_type: mac_mini_m1
+    environment:
+      vars:
+        XCODE_PROJECT: "iPadApp/SecondaryScreen.xcodeproj"
+        XCODE_SCHEME: "SecondaryScreen"
+        GITHUB_TOKEN: $GITHUB_TOKEN
+      xcode: 15.0
+    scripts:
+      - name: Set up build environment
+        script: |
+          echo "Building Secondary Screen iPad App..."
+          echo "Project: $XCODE_PROJECT"
+          echo "Scheme: $XCODE_SCHEME"
+      
+      - name: Configure project for unsigned build
+        script: |
+          cd iPadApp
+          
+          # Update Info.plist with proper bundle identifier
+          /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier com.secondaryscreen.ipad" SecondaryScreen/Info.plist || true
+          
+          # Modify project settings to disable code signing
+          sed -i '' 's/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Manual;/g' SecondaryScreen.xcodeproj/project.pbxproj || true
+          sed -i '' 's/DEVELOPMENT_TEAM = .*;/DEVELOPMENT_TEAM = "";/g' SecondaryScreen.xcodeproj/project.pbxproj || true
+          sed -i '' 's/PRODUCT_BUNDLE_IDENTIFIER = .*;/PRODUCT_BUNDLE_IDENTIFIER = com.secondaryscreen.ipad;/g' SecondaryScreen.xcodeproj/project.pbxproj || true
+          
+          echo "✓ Project configured for unsigned build"
+          
+      - name: Build app for iOS device
+        script: |
+          set -euo pipefail
+          cd iPadApp
+          
+          # Build for device without code signing
+          echo "Starting xcodebuild..."
+          if xcodebuild clean build \
+            -project SecondaryScreen.xcodeproj \
+            -scheme "$XCODE_SCHEME" \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build/DerivedData \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            DEVELOPMENT_TEAM="" \
+            PROVISIONING_PROFILE="" \
+            PRODUCT_BUNDLE_IDENTIFIER="com.secondaryscreen.ipad" \
+            | xcpretty; then
+            echo "✓ Build completed successfully"
+          else
+            echo "❌ Build failed!"
+            echo "Listing build directory contents:"
+            find build -name "*.app" -o -name "*.xcarchive" -o -name "*.log" | head -20
+            exit 1
+          fi
+      
+      - name: Create unsigned IPA package
+        script: |
+          set -euo pipefail
+          cd iPadApp
+
+          echo "Searching for .app bundle..."
+          find build -name "*.app" -type d 2>/dev/null | head -10 || echo "No .app found"
+          
+          LOCAL_APP_PATH=$(find build -name "*.app" -type d 2>/dev/null | head -1 || true)
+          if [ -n "$LOCAL_APP_PATH" ] && [ -d "$LOCAL_APP_PATH" ]; then
+            APP_PATH="$LOCAL_APP_PATH"
+            echo "Found .app at: $APP_PATH"
+          else
+            echo "❌ No .app bundle found in build directory"
+            exit 1
+          fi
+
+          # Verify .app structure and binary
+          echo "Verifying .app structure:"
+          ls -la "$APP_PATH"
+          
+          # Check if executable exists
+          APP_NAME=$(basename "$APP_PATH" .app)
+          EXECUTABLE_PATH="$APP_PATH/$APP_NAME"
+          
+          if [ ! -f "$EXECUTABLE_PATH" ]; then
+            echo "❌ Error: Missing executable binary at $EXECUTABLE_PATH"
+            echo "This indicates the build did not compile properly."
+            exit 1
+          fi
+          
+          echo "✓ Found executable: $EXECUTABLE_PATH"
+          file "$EXECUTABLE_PATH" | head -1
+
+          rm -rf build/Payload
+          mkdir -p build/Payload
+          cp -R "$APP_PATH" build/Payload/
+
+          cd build
+          zip -qry SecondaryScreen-iPad-Unsigned.ipa Payload
+          
+          echo "IPA created in: $(pwd)/SecondaryScreen-iPad-Unsigned.ipa"
+          ls -lh SecondaryScreen-iPad-Unsigned.ipa
+          
+          mkdir -p ../../release/ios
+          cp -f SecondaryScreen-iPad-Unsigned.ipa ../../release/ios/
+          
+          echo "IPA copied to: $(cd ../../release/ios && pwd)/SecondaryScreen-iPad-Unsigned.ipa"
+
+      - name: Verify IPA
+        script: |
+          echo "Searching for IPA file..."
+          find . -name "SecondaryScreen-iPad-Unsigned.ipa" -type f 2>/dev/null || true
+          
+          # Check multiple possible locations
+          if [ -f "release/ios/SecondaryScreen-iPad-Unsigned.ipa" ]; then
+            echo "✅ Build successful! (Found in release/ios/)"
+            ls -lh "release/ios/SecondaryScreen-iPad-Unsigned.ipa"
+          elif [ -f "iPadApp/build/SecondaryScreen-iPad-Unsigned.ipa" ]; then
+            echo "✅ Build successful! (Found in build/)"
+            ls -lh "iPadApp/build/SecondaryScreen-iPad-Unsigned.ipa"
+          else
+            echo "❌ IPA not found in expected locations"
+            exit 1
+          fi
+      
+      - name: Upload to GitHub Releases
+        script: |
+          # Install GitHub CLI if not available
+          if ! command -v gh &> /dev/null; then
+            echo "Installing GitHub CLI..."
+            brew install gh
+          fi
+          
+          # Set version tag
+          TAG_NAME="v1.0.${CM_BUILD_NUMBER}"
+          IPA_PATH="release/ios/SecondaryScreen-iPad-Unsigned.ipa"
+          
+          # Authenticate with GitHub
+          echo "$GITHUB_TOKEN" | gh auth login --with-token
+          
+          # Create release and upload IPA
+          echo "Creating GitHub Release: $TAG_NAME"
+          gh release create "$TAG_NAME" \
+            "$IPA_PATH" \
+            --repo yasicreeper/SecondaryScreen \
+            --title "iPad App Build #${CM_BUILD_NUMBER}" \
+            --notes "📱 Secondary Screen - iPad App (Unsigned IPA)
+
+          ## Installation Instructions
+          1. Download SecondaryScreen-iPad-Unsigned.ipa
+          2. Install using AltStore, Sideloadly, or similar tool
+          3. Trust the app in Settings > General > VPN & Device Management
+          4. Start Windows app and click 'Start Server'
+          5. Open iPad app and connect via WiFi
+          
+          ## Features
+          - ✅ WiFi connectivity to Windows PC
+          - ✅ Auto-discovery of servers
+          - ✅ Manual IP connection option
+          - ✅ Touch input support
+          - ✅ Multiple orientations (landscape/portrait)
+          - ✅ Real-time screen mirroring
+          - ✅ Settings synchronization
+          
+          ## Requirements
+          - iPad running iOS 14.0 or later
+          - Same WiFi network as Windows PC
+          - Windows app running and server started
+          
+          Build date: $(date)" || echo "Release creation skipped (may already exist)"
+          
+          echo "✅ IPA uploaded to GitHub Releases!"
+          echo "Download from: https://github.com/yasicreeper/SecondaryScreen/releases/tag/$TAG_NAME"
+
+    artifacts:
+      - release/ios/*.ipa
+      - iPadApp/build/*.ipa
+    
+    publishing:
+      email:
+        recipients:
+          - yasicree9@gmail.com
+        notify:
+          success: true
+          failure: true
+
+  # ============================================
+  # Windows App - Build EXE
+  # Note: Codemagic primarily supports macOS/Linux
+  # For Windows builds, consider using GitHub Actions or Azure Pipelines
+  # This workflow builds on macOS using .NET SDK
+  # ============================================
+  windows-build-workflow:
+    name: Secondary Screen Windows (Cross-compile)
+    max_build_duration: 60
+    instance_type: mac_mini_m1
+    environment:
+      vars:
+        GITHUB_TOKEN: $GITHUB_TOKEN
+    scripts:
+      - name: Install .NET SDK
+        script: |
+          echo "Installing .NET 8.0 SDK..."
+          
+          # Download and install .NET SDK for macOS
+          curl -L https://dot.net/v1/dotnet-install.sh -o dotnet-install.sh
+          chmod +x dotnet-install.sh
+          ./dotnet-install.sh --channel 8.0
+          
+          # Add to PATH
+          export DOTNET_ROOT=$HOME/.dotnet
+          export PATH=$PATH:$DOTNET_ROOT:$DOTNET_ROOT/tools
+          
+          dotnet --version
+          echo "✓ .NET SDK installed"
+      
+      - name: Build Windows EXE
+        script: |
+          export DOTNET_ROOT=$HOME/.dotnet
+          export PATH=$PATH:$DOTNET_ROOT:$DOTNET_ROOT/tools
+          
+          echo "Building Windows application..."
+          cd WindowsApp
+          
+          # Restore dependencies
+          dotnet restore SecondaryScreenHost.csproj
+          
+          # Build single-file executable for Windows
+          dotnet publish SecondaryScreenHost.csproj \
+            -c Release \
+            -r win-x64 \
+            --self-contained true \
+            -p:PublishSingleFile=true \
+            -p:IncludeNativeLibrariesForSelfExtract=true \
+            -p:PublishTrimmed=false \
+            -o ../release/windows
+          
+          echo "✓ Build completed"
+          ls -lh ../release/windows/
+      
+      - name: Verify Windows EXE
+        script: |
+          if [ -f "release/windows/SecondaryScreenHost.exe" ]; then
+            echo "✅ Windows EXE built successfully!"
+            ls -lh release/windows/SecondaryScreenHost.exe
+            
+            # Get file size
+            FILE_SIZE=$(ls -lh release/windows/SecondaryScreenHost.exe | awk '{print $5}')
+            echo "File size: $FILE_SIZE"
+          else
+            echo "❌ EXE not found"
+            ls -la release/windows/ || echo "Release directory not found"
+            exit 1
+          fi
+      
+      - name: Create Windows README
+        script: |
+          cat > release/windows/README.txt << 'EOF'
+          Secondary Screen Host - Windows Application
+          Version 1.0.0
+
+          INSTALLATION:
+          1. Run SecondaryScreenHost.exe
+          2. Click 'Start Server' to begin
+          3. Note the IP address displayed in the connection info
+          4. Connect from your iPad app using this IP address
+
+          SYSTEM REQUIREMENTS:
+          - Windows 10 or later (64-bit)
+          - .NET Runtime (included in this build)
+          - Network connection (WiFi or Ethernet)
+
+          FIREWALL CONFIGURATION:
+          If the iPad cannot connect, allow the app through Windows Firewall.
+          Run this command in PowerShell (as Administrator):
+
+          netsh advfirewall firewall add rule name="Secondary Screen" dir=in action=allow protocol=TCP localport=8888
+
+          USAGE:
+          1. Start the server on Windows
+          2. Note the displayed IP address (e.g., 192.168.1.100:8888)
+          3. Open the iPad app
+          4. Connect using auto-discovery or manual IP entry
+          5. Your iPad is now a secondary display!
+
+          FEATURES:
+          - WiFi connectivity
+          - Auto-discovery of iPad devices
+          - Adjustable resolution and quality
+          - Frame rate control (15-60 FPS)
+          - Touch input support
+          - Settings synchronization
+
+          TROUBLESHOOTING:
+          - Ensure both devices are on the same WiFi network
+          - Check Windows Firewall settings
+          - Try manual IP connection if auto-discovery fails
+          - Reduce quality/FPS if experiencing lag
+
+          For more information, visit the GitHub repository.
+          EOF
+          
+          echo "✓ README created"
+      
+      - name: Upload Windows build to GitHub Releases
+        script: |
+          # Install GitHub CLI if not available
+          if ! command -v gh &> /dev/null; then
+            echo "Installing GitHub CLI..."
+            brew install gh
+          fi
+          
+          # Set version tag
+          TAG_NAME="v1.0.${CM_BUILD_NUMBER}-windows"
+          EXE_PATH="release/windows/SecondaryScreenHost.exe"
+          README_PATH="release/windows/README.txt"
+          
+          # Authenticate with GitHub
+          echo "$GITHUB_TOKEN" | gh auth login --with-token
+          
+          # Create release and upload Windows EXE
+          echo "Creating GitHub Release: $TAG_NAME"
+          gh release create "$TAG_NAME" \
+            "$EXE_PATH" \
+            "$README_PATH" \
+            --repo yasicreeper/SecondaryScreen \
+            --title "Windows App Build #${CM_BUILD_NUMBER}" \
+            --notes "🖥️ Secondary Screen - Windows Host Application
+
+          ## Installation
+          1. Download SecondaryScreenHost.exe
+          2. Run the executable (no installation required)
+          3. Allow through Windows Firewall if prompted
+          4. Click 'Start Server'
+          
+          ## Features
+          - ✅ WiFi server for iPad connections
+          - ✅ Auto-discovery via Bonjour/mDNS
+          - ✅ Screen capture and streaming
+          - ✅ Configurable resolution (1024x768 - 2732x2048)
+          - ✅ Quality control (1-100%)
+          - ✅ Frame rate adjustment (15-60 FPS)
+          - ✅ Touch input from iPad
+          - ✅ Settings management
+          
+          ## Requirements
+          - Windows 10 or later (64-bit)
+          - .NET 8.0 Runtime (included in this build)
+          - Network adapter (WiFi or Ethernet)
+          - 4GB RAM minimum
+          
+          ## Download Both Apps
+          - iPad IPA: See release v1.0.${CM_BUILD_NUMBER}
+          - Windows EXE: This release
+          
+          Build date: $(date)" || echo "Release creation skipped"
+          
+          echo "✅ Windows EXE uploaded to GitHub Releases!"
+
+    artifacts:
+      - release/windows/*.exe
+      - release/windows/*.txt
+    
+    publishing:
+      email:
+        recipients:
+          - yasicree9@gmail.com
+        notify:
+          success: true
+          failure: true
+
+  # ============================================
+  # Combined Build - Both iPad and Windows
+  # ============================================
+  combined-build-workflow:
+    name: Secondary Screen - Full Build (iPad + Windows)
+    max_build_duration: 90
+    instance_type: mac_mini_m1
+    environment:
+      vars:
+        XCODE_PROJECT: "iPadApp/SecondaryScreen.xcodeproj"
+        XCODE_SCHEME: "SecondaryScreen"
+        GITHUB_TOKEN: $GITHUB_TOKEN
+      xcode: 15.0
+    scripts:
+      - name: Set up build environment
+        script: |
+          echo "Building Secondary Screen - Full Suite"
+          echo "This workflow builds both iPad IPA and Windows EXE"
+      
+      # iPad Build Steps
+      - name: Configure iPad project
+        script: |
+          cd iPadApp
+          /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier com.secondaryscreen.ipad" SecondaryScreen/Info.plist || true
+          sed -i '' 's/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Manual;/g' SecondaryScreen.xcodeproj/project.pbxproj || true
+          sed -i '' 's/DEVELOPMENT_TEAM = .*;/DEVELOPMENT_TEAM = "";/g' SecondaryScreen.xcodeproj/project.pbxproj || true
+          echo "✓ iPad project configured"
+      
+      - name: Build iPad app
+        script: |
+          set -euo pipefail
+          cd iPadApp
+          xcodebuild clean build \
+            -project SecondaryScreen.xcodeproj \
+            -scheme "$XCODE_SCHEME" \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build/DerivedData \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            | xcpretty
+          echo "✓ iPad build completed"
+      
+      - name: Create iPad IPA
+        script: |
+          cd iPadApp
+          APP_PATH=$(find build -name "*.app" -type d | head -1)
+          rm -rf build/Payload
+          mkdir -p build/Payload
+          cp -R "$APP_PATH" build/Payload/
+          cd build
+          zip -qry SecondaryScreen-iPad.ipa Payload
+          mkdir -p ../../release/ios
+          cp -f SecondaryScreen-iPad.ipa ../../release/ios/
+          echo "✓ iPad IPA created"
+      
+      # Windows Build Steps
+      - name: Install .NET SDK
+        script: |
+          curl -L https://dot.net/v1/dotnet-install.sh -o dotnet-install.sh
+          chmod +x dotnet-install.sh
+          ./dotnet-install.sh --channel 8.0
+          export DOTNET_ROOT=$HOME/.dotnet
+          export PATH=$PATH:$DOTNET_ROOT
+          dotnet --version
+          echo "✓ .NET SDK installed"
+      
+      - name: Build Windows EXE
+        script: |
+          export DOTNET_ROOT=$HOME/.dotnet
+          export PATH=$PATH:$DOTNET_ROOT
+          cd WindowsApp
+          dotnet publish -c Release -r win-x64 --self-contained true \
+            -p:PublishSingleFile=true \
+            -p:IncludeNativeLibrariesForSelfExtract=true \
+            -o ../release/windows
+          echo "✓ Windows EXE built"
+      
+      - name: Verify builds
+        script: |
+          echo "Verifying all builds..."
+          
+          if [ -f "release/ios/SecondaryScreen-iPad.ipa" ]; then
+            echo "✅ iPad IPA: $(ls -lh release/ios/SecondaryScreen-iPad.ipa | awk '{print $5}')"
+          else
+            echo "❌ iPad IPA not found"
+            exit 1
+          fi
+          
+          if [ -f "release/windows/SecondaryScreenHost.exe" ]; then
+            echo "✅ Windows EXE: $(ls -lh release/windows/SecondaryScreenHost.exe | awk '{print $5}')"
+          else
+            echo "❌ Windows EXE not found"
+            exit 1
+          fi
+          
+          echo "✅ All builds successful!"
+      
+      - name: Upload complete package to GitHub
+        script: |
+          if ! command -v gh &> /dev/null; then
+            brew install gh
+          fi
+          
+          TAG_NAME="v1.0.${CM_BUILD_NUMBER}-complete"
+          
+          echo "$GITHUB_TOKEN" | gh auth login --with-token
+          
+          gh release create "$TAG_NAME" \
+            "release/ios/SecondaryScreen-iPad.ipa" \
+            "release/windows/SecondaryScreenHost.exe" \
+            --repo yasicreeper/SecondaryScreen \
+            --title "Secondary Screen v1.0.${CM_BUILD_NUMBER} - Complete Package" \
+            --notes "📦 Secondary Screen - Complete Package
+
+          ## What's Included
+          - 📱 iPad App (IPA) - Unsigned for sideloading
+          - 🖥️ Windows App (EXE) - Self-contained executable
+          
+          ## Quick Start
+          1. Install iPad IPA using AltStore/Sideloadly
+          2. Run Windows EXE on your PC
+          3. Start server on Windows
+          4. Connect iPad app to Windows IP
+          5. Enjoy your secondary display!
+          
+          ## Full Documentation
+          See README.md in repository for detailed setup instructions.
+          
+          Build #${CM_BUILD_NUMBER} | $(date)" || echo "Release creation skipped"
+
+    artifacts:
+      - release/ios/*.ipa
+      - release/windows/*.exe
+    
+    publishing:
+      email:
+        recipients:
+          - yasicree9@gmail.com
+        notify:
+          success: true
+          failure: true

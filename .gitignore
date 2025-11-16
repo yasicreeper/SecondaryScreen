@@ -1,0 +1,41 @@
+# .NET Build artifacts
+WindowsApp/bin/
+WindowsApp/obj/
+*.user
+*.suo
+*.userprefs
+.vs/
+
+# Build output
+Build/
+Installer/
+
+# iPad/Xcode
+iPadApp/*.xcodeproj/xcuserdata/
+iPadApp/*.xcworkspace/xcuserdata/
+iPadApp/DerivedData/
+iPadApp/*.xcarchive/
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# macOS
+.DS_Store
+*.swp
+*~
+
+# IDE
+.vscode/
+.idea/
+*.code-workspace
+
+# Dependencies
+node_modules/
+packages/
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
