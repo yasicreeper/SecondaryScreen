@@ -120,6 +120,7 @@ namespace SecondaryScreenHost
             if (IsLoaded && ResolutionCombo.SelectedItem is ComboBoxItem item)
             {
                 UpdateStatusBar($"Resolution set to {item.Content}");
+                ApplySettingsImmediately();
             }
         }
 
@@ -128,6 +129,7 @@ namespace SecondaryScreenHost
             if (IsLoaded && StatusBarText != null)
             {
                 UpdateStatusBar($"Quality set to {(int)e.NewValue}%");
+                ApplySettingsImmediately();
             }
         }
 
@@ -136,6 +138,7 @@ namespace SecondaryScreenHost
             if (IsLoaded && StatusBarText != null)
             {
                 UpdateStatusBar($"Frame rate set to {(int)e.NewValue} FPS");
+                ApplySettingsImmediately();
             }
         }
 
@@ -144,6 +147,7 @@ namespace SecondaryScreenHost
             if (IsLoaded && StatusBarText != null)
             {
                 UpdateStatusBar($"Auto-start {(AutoStartCheck.IsChecked == true ? "enabled" : "disabled")}");
+                ApplySettingsImmediately();
             }
         }
 
@@ -152,6 +156,7 @@ namespace SecondaryScreenHost
             if (IsLoaded && StatusBarText != null)
             {
                 UpdateStatusBar($"Touch input {(TouchInputCheck.IsChecked == true ? "enabled" : "disabled")}");
+                ApplySettingsImmediately();
             }
         }
 
@@ -160,6 +165,7 @@ namespace SecondaryScreenHost
             if (IsLoaded && StatusBarText != null)
             {
                 UpdateStatusBar($"Auto-connect {(AutoConnectCheck.IsChecked == true ? "enabled" : "disabled")}");
+                ApplySettingsImmediately();
             }
         }
 
@@ -168,6 +174,7 @@ namespace SecondaryScreenHost
             if (IsLoaded && OrientationCombo.SelectedItem is ComboBoxItem item && StatusBarText != null)
             {
                 UpdateStatusBar($"Orientation set to {item.Content}");
+                ApplySettingsImmediately();
             }
         }
 
@@ -181,15 +188,16 @@ namespace SecondaryScreenHost
                 AutoStart = AutoStartCheck.IsChecked == true,
                 TouchInputEnabled = TouchInputCheck.IsChecked == true,
                 AutoConnect = AutoConnectCheck.IsChecked == true,
-                Orientation = (OrientationCombo.SelectedItem as ComboBoxItem)?.Content.ToString() ?? "Auto"
+                Orientation = (OrientationCombo.SelectedItem as ComboBoxItem)?.Content.ToString() ?? "Auto",
+                Port = 8888
             };
             
             _settingsManager.SaveSettings(settings);
             _serverManager.ApplySettings(settings);
             
-            MessageBox.Show("Settings applied successfully!", "Settings", 
+            MessageBox.Show("Settings saved and will persist on restart!", "Settings Saved", 
                 MessageBoxButton.OK, MessageBoxImage.Information);
-            UpdateStatusBar("Settings saved and applied");
+            UpdateStatusBar("Settings saved to disk");
         }
 
         private void OnDeviceConnected(object? sender, DeviceInfo device)
@@ -247,6 +255,25 @@ namespace SecondaryScreenHost
         private void UpdateStatusBar(string text)
         {
             StatusBarText.Text = $"{DateTime.Now:HH:mm:ss} - {text}";
+        }
+
+        private void ApplySettingsImmediately()
+        {
+            if (!IsLoaded) return;
+
+            var settings = new AppSettings
+            {
+                Resolution = (ResolutionCombo.SelectedItem as ComboBoxItem)?.Content.ToString() ?? "1024x768",
+                Quality = (int)QualitySlider.Value,
+                FrameRate = (int)FpsSlider.Value,
+                AutoStart = AutoStartCheck.IsChecked == true,
+                TouchInputEnabled = TouchInputCheck.IsChecked == true,
+                AutoConnect = AutoConnectCheck.IsChecked == true,
+                Orientation = (OrientationCombo.SelectedItem as ComboBoxItem)?.Content.ToString() ?? "Auto",
+                Port = 8888
+            };
+
+            _serverManager.ApplySettings(settings);
         }
 
         protected override void OnClosed(EventArgs e)
