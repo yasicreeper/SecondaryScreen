@@ -16,23 +16,24 @@ struct ContentView: View {
                 ConnectionView()
             }
             
-            // Settings and Debug buttons overlay
-            if !connectionManager.isConnected {
-                VStack {
-                    HStack {
-                        Spacer()
-                        VStack(spacing: 10) {
-                            Button(action: {
-                                showDebugConsole = true
-                            }) {
-                                Image(systemName: "terminal")
-                                    .font(.title2)
-                                    .foregroundColor(.white)
-                                    .padding()
-                                    .background(Color.green.opacity(0.8))
-                                    .clipShape(Circle())
-                            }
-                            
+            // Settings and Debug buttons overlay - always show
+            VStack {
+                HStack {
+                    Spacer()
+                    VStack(spacing: 10) {
+                        Button(action: {
+                            showDebugConsole = true
+                        }) {
+                            Image(systemName: "terminal")
+                                .font(.title2)
+                                .foregroundColor(.white)
+                                .padding()
+                                .background(Color.green.opacity(0.8))
+                                .clipShape(Circle())
+                                .shadow(radius: 5)
+                        }
+                        
+                        if !connectionManager.isConnected {
                             Button(action: {
                                 showSettings = true
                             }) {
@@ -42,12 +43,13 @@ struct ContentView: View {
                                     .padding()
                                     .background(Color.blue.opacity(0.8))
                                     .clipShape(Circle())
+                                    .shadow(radius: 5)
                             }
                         }
-                        .padding()
                     }
-                    Spacer()
+                    .padding()
                 }
+                Spacer()
             }
         }
         .sheet(isPresented: $showSettings) {
