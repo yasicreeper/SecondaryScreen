@@ -10,6 +10,7 @@ class ConnectionManager: ObservableObject {
     @Published var currentFrame: UIImage?
     @Published var errorMessage: String?
     @Published var settings = AppSettings()
+    @Published var debugLogger = DebugLogger()
     
     let deviceId = UUID().uuidString
     
@@ -19,14 +20,20 @@ class ConnectionManager: ObservableObject {
     private var receiveBuffer = Data()
     
     init() {
+        debugLogger.log("🚀 ConnectionManager initialized")
+        debugLogger.log("📱 Device ID: \(deviceId)")
+        debugLogger.log("📍 Device: \(UIDevice.current.name)")
+        
         loadSettings()
         if settings.autoConnect {
+            debugLogger.log("🔄 Auto-connect enabled, starting search...")
             startSearching()
         }
     }
     
     func startSearching() {
         isSearching = true
+        debugLogger.log("🔍 Starting device search...")
         errorMessage = nil
         
         // Start Bonjour/mDNS browser
@@ -77,6 +84,8 @@ class ConnectionManager: ObservableObject {
         errorMessage = nil
         isConnecting = true
         
+        debugLogger.log("🔌 Connecting to \(ipAddress):8888...")
+        
         let host = NWEndpoint.Host(ipAddress)
         let port = NWEndpoint.Port(integerLiteral: 8888)
         
@@ -87,19 +96,23 @@ class ConnectionManager: ObservableObject {
             DispatchQueue.main.async {
                 switch state {
                 case .ready:
+                    self?.debugLogger.log("✅ Connected successfully!")
                     self?.isConnected = true
                     self?.isConnecting = false
                     self?.errorMessage = nil
                     self?.startReceiving()
                     self?.sendDeviceInfo()
                 case .failed(let error):
+                    self?.debugLogger.log("❌ Connection failed: \(error.localizedDescription)")
                     self?.errorMessage = "Cannot connect to \(ipAddress)\n\n✓ Check PC is running the server\n✓ Check both on same WiFi\n✓ Check IP address is correct"
                     self?.isConnected = false
                     self?.isConnecting = false
                 case .waiting(let error):
+                    self?.debugLogger.log("⏳ Waiting to connect: \(error.localizedDescription)")
                     self?.errorMessage = "Waiting to connect..."
                     self?.isConnecting = true
                 case .cancelled:
+                    self?.debugLogger.log("🚫 Connection cancelled")
                     self?.isConnecting = false
                 default:
                     break
@@ -138,7 +151,7 @@ class ConnectionManager: ObservableObject {
         let data = (message + "\n").data(using: .utf8)!
         connection.send(content: data, completion: .contentProcessed { error in
             if let error = error {
-                print("Send error: \(error)")
+                debugLogger.log("Send error: \(error)")
             }
         })
     }
@@ -184,11 +197,11 @@ class ConnectionManager: ObservableObject {
     }
     
     private func handleMessage(type: String, data: [String: Any]) {
-        print("📥 Received message type: \(type)")
+        debugLogger.log("📥 Received message type: \(type)")
         
         switch type {
         case "settings":
-            print("⚙️ Settings received: \(data)")
+            debugLogger.log("⚙️ Settings received: \(data)")
             // Update settings from server
             if let resolution = data["resolution"] as? String {
                 // Handle resolution update
@@ -202,20 +215,20 @@ class ConnectionManager: ObservableObject {
             if let dataSize = data["dataSize"] as? Int,
                let width = data["width"] as? Int,
                let height = data["height"] as? Int {
-                print("🖼️ Frame header: \(width)x\(height), size: \(dataSize) bytes")
+                debugLogger.log("🖼️ Frame header: \(width)x\(height), size: \(dataSize) bytes")
                 receiveFrame(size: dataSize, width: width, height: height)
             } else {
-                print("❌ Invalid frame header: \(data)")
+                debugLogger.log("❌ Invalid frame header: \(data)")
             }
             
         default:
-            print("❓ Unknown message type: \(type)")
+            debugLogger.log("❓ Unknown message type: \(type)")
             break
         }
     }
     
     private func receiveFrame(size: Int, width: Int, height: Int) {
-        print("📥 Starting to receive frame: \(size) bytes")
+        debugLogger.log("📥 Starting to receive frame: \(size) bytes")
         
         // Receive in chunks if needed - TCP may split large frames
         var frameData = Data()
@@ -227,7 +240,7 @@ class ConnectionManager: ObservableObject {
         
         connection?.receive(minimumIncompleteLength: 1, maximumLength: chunkSize) { [weak self] data, _, _, error in
             if let error = error {
-                print("❌ Frame chunk receive error: \(error)")
+                debugLogger.log("❌ Frame chunk receive error: \(error)")
                 DispatchQueue.main.async {
                     self?.errorMessage = "Frame receive error: \(error.localizedDescription)"
                 }
@@ -236,7 +249,7 @@ class ConnectionManager: ObservableObject {
             }
             
             guard let data = data else {
-                print("❌ No data received")
+                debugLogger.log("❌ No data received")
                 self?.receiveMessage()
                 return
             }
@@ -245,22 +258,22 @@ class ConnectionManager: ObservableObject {
             newAccumulated.append(data)
             let newRemaining = remaining - data.count
             
-            print("📦 Received chunk: \(data.count) bytes, remaining: \(newRemaining)")
+            debugLogger.log("📦 Received chunk: \(data.count) bytes, remaining: \(newRemaining)")
             
             if newRemaining > 0 {
                 // More data needed
                 self?.receiveFrameData(remaining: newRemaining, accumulated: newAccumulated, width: width, height: height)
             } else {
                 // Complete frame received
-                print("✅ Complete frame received: \(newAccumulated.count) bytes")
+                debugLogger.log("✅ Complete frame received: \(newAccumulated.count) bytes")
                 
                 if let image = UIImage(data: newAccumulated) {
                     DispatchQueue.main.async {
                         self?.currentFrame = image
-                        print("🖼️ Image decoded successfully!")
+                        debugLogger.log("🖼️ Image decoded successfully!")
                     }
                 } else {
-                    print("❌ Failed to decode image from \(newAccumulated.count) bytes")
+                    debugLogger.log("❌ Failed to decode image from \(newAccumulated.count) bytes")
                 }
                 
                 // Continue receiving messages
@@ -317,3 +330,4 @@ extension JSONDecoder {
         return try decode(type, from: data)
     }
 }
+

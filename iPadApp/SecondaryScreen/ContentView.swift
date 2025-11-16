@@ -3,6 +3,7 @@ import SwiftUI
 struct ContentView: View {
     @EnvironmentObject var connectionManager: ConnectionManager
     @State private var showSettings = false
+    @State private var showDebugConsole = false
     
     var body: some View {
         ZStack {
@@ -15,20 +16,33 @@ struct ContentView: View {
                 ConnectionView()
             }
             
-            // Settings button overlay
+            // Settings and Debug buttons overlay
             if !connectionManager.isConnected {
                 VStack {
                     HStack {
                         Spacer()
-                        Button(action: {
-                            showSettings = true
-                        }) {
-                            Image(systemName: "gear")
-                                .font(.title)
-                                .foregroundColor(.white)
-                                .padding()
-                                .background(Color.blue.opacity(0.8))
-                                .clipShape(Circle())
+                        VStack(spacing: 10) {
+                            Button(action: {
+                                showDebugConsole = true
+                            }) {
+                                Image(systemName: "terminal")
+                                    .font(.title2)
+                                    .foregroundColor(.white)
+                                    .padding()
+                                    .background(Color.green.opacity(0.8))
+                                    .clipShape(Circle())
+                            }
+                            
+                            Button(action: {
+                                showSettings = true
+                            }) {
+                                Image(systemName: "gear")
+                                    .font(.title2)
+                                    .foregroundColor(.white)
+                                    .padding()
+                                    .background(Color.blue.opacity(0.8))
+                                    .clipShape(Circle())
+                            }
                         }
                         .padding()
                     }
@@ -38,6 +52,10 @@ struct ContentView: View {
         }
         .sheet(isPresented: $showSettings) {
             SettingsView()
+                .environmentObject(connectionManager)
+        }
+        .sheet(isPresented: $showDebugConsole) {
+            DebugConsoleView()
                 .environmentObject(connectionManager)
         }
     }

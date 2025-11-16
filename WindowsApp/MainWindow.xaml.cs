@@ -13,10 +13,16 @@ namespace SecondaryScreenHost
         private readonly ServerManager _serverManager;
         private readonly SettingsManager _settingsManager;
         private readonly ObservableCollection<DeviceInfo> _devices;
+        private readonly DebugLogger _debugLogger;
 
         public MainWindow()
         {
             InitializeComponent();
+            
+            // Setup debug logging
+            _debugLogger = new DebugLogger(Console.Out);
+            Console.SetOut(_debugLogger);
+            _debugLogger.LogUpdated += OnLogUpdated;
             
             _devices = new ObservableCollection<DeviceInfo>();
             DeviceList.ItemsSource = _devices;
@@ -27,6 +33,9 @@ namespace SecondaryScreenHost
             _serverManager.DeviceConnected += OnDeviceConnected;
             _serverManager.DeviceDisconnected += OnDeviceDisconnected;
             _serverManager.StatusChanged += OnStatusChanged;
+            
+            Console.WriteLine("🚀 Application started");
+            Console.WriteLine($"📍 Version 1.0.0");
             
             LoadSettings();
             UpdateStatusBar("Ready - Click 'Start Server' to begin");
@@ -274,6 +283,36 @@ namespace SecondaryScreenHost
             };
 
             _serverManager.ApplySettings(settings);
+        }
+
+        private void OnLogUpdated(object? sender, string logMessage)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                DebugConsoleText.Text += logMessage;
+                DebugScrollViewer.ScrollToEnd();
+            });
+        }
+
+        private void ClearConsole_Click(object sender, RoutedEventArgs e)
+        {
+            _debugLogger.Clear();
+            DebugConsoleText.Text = "";
+            Console.WriteLine("🧹 Console cleared");
+        }
+
+        private void CopyConsole_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                Clipboard.SetText(_debugLogger.GetFullLog());
+                UpdateStatusBar("Debug log copied to clipboard");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to copy: {ex.Message}", "Error", 
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         protected override void OnClosed(EventArgs e)
