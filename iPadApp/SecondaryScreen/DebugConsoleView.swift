@@ -2,7 +2,7 @@ import SwiftUI
 
 struct DebugConsoleView: View {
     @EnvironmentObject var connectionManager: ConnectionManager
-    @Environment(\.presentationMode) var presentationMode
+    @Binding var isPresented: Bool
     
     var body: some View {
         NavigationView {
@@ -63,12 +63,23 @@ struct DebugConsoleView: View {
             }
             .navigationTitle("Debug Console")
             .navigationBarTitleDisplayMode(.inline)
-            .navigationBarItems(trailing: 
-                Button(action: {
-                    presentationMode.wrappedValue.dismiss()
+            .navigationBarItems(
+                leading: Button(action: {
+                    isPresented = false
+                }) {
+                    HStack {
+                        Image(systemName: "xmark.circle.fill")
+                        Text("Close")
+                    }
+                    .font(.headline)
+                    .foregroundColor(.red)
+                },
+                trailing: Button(action: {
+                    isPresented = false
                 }) {
                     Text("Done")
                         .fontWeight(.semibold)
+                        .foregroundColor(.blue)
                 }
             )
         }

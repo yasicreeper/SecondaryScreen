@@ -16,11 +16,33 @@ struct ContentView: View {
                 ConnectionView()
             }
             
-            // Settings and Debug buttons overlay - always show
+            // Settings and Debug buttons overlay - ALWAYS ACCESSIBLE
             VStack {
                 HStack {
+                    // Cancel button during connection
+                    if connectionManager.isConnecting {
+                        Button(action: {
+                            connectionManager.disconnect()
+                        }) {
+                            HStack {
+                                Image(systemName: "xmark.circle.fill")
+                                Text("Cancel")
+                            }
+                            .font(.headline)
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 12)
+                            .background(Color.red.opacity(0.9))
+                            .cornerRadius(25)
+                            .shadow(radius: 5)
+                        }
+                        .padding(.leading, 20)
+                    }
+                    
                     Spacer()
+                    
                     VStack(spacing: 10) {
+                        // Debug console - ALWAYS visible and working
                         Button(action: {
                             showDebugConsole = true
                         }) {
@@ -28,12 +50,12 @@ struct ContentView: View {
                                 .font(.title2)
                                 .foregroundColor(.white)
                                 .padding()
-                                .background(Color.green.opacity(0.8))
+                                .background(Color.green.opacity(0.9))
                                 .clipShape(Circle())
                                 .shadow(radius: 5)
                         }
                         
-                        if !connectionManager.isConnected {
+                        if !connectionManager.isConnected && !connectionManager.isConnecting {
                             Button(action: {
                                 showSettings = true
                             }) {
@@ -41,7 +63,7 @@ struct ContentView: View {
                                     .font(.title2)
                                     .foregroundColor(.white)
                                     .padding()
-                                    .background(Color.blue.opacity(0.8))
+                                    .background(Color.blue.opacity(0.9))
                                     .clipShape(Circle())
                                     .shadow(radius: 5)
                             }
@@ -51,13 +73,14 @@ struct ContentView: View {
                 }
                 Spacer()
             }
+            .zIndex(1000) // Ensure buttons are on top
         }
-        .sheet(isPresented: $showSettings) {
+        .fullScreenCover(isPresented: $showSettings) {
             SettingsView()
                 .environmentObject(connectionManager)
         }
-        .sheet(isPresented: $showDebugConsole) {
-            DebugConsoleView()
+        .fullScreenCover(isPresented: $showDebugConsole) {
+            DebugConsoleView(isPresented: $showDebugConsole)
                 .environmentObject(connectionManager)
         }
     }
