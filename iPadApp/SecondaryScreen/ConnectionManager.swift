@@ -60,7 +60,7 @@ class ConnectionManager: ObservableObject {
         browser.browseResultsChangedHandler = { [weak self] results, changes in
             DispatchQueue.main.async {
                 self?.availableDevices = results.compactMap { result -> DeviceInfo? in
-                    guard case .service(let name, let type, let domain, let interface) = result.endpoint else {
+                    guard case .service(let name, _, _, _) = result.endpoint else {
                         return nil
                     }
                     return DeviceInfo(id: UUID().uuidString, name: name, ipAddress: "", connectionType: "WiFi")

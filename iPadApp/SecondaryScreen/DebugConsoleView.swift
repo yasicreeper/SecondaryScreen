@@ -2,7 +2,7 @@ import SwiftUI
 
 struct DebugConsoleView: View {
     @EnvironmentObject var connectionManager: ConnectionManager
-    @Environment(\.dismiss) var dismiss
+    @Environment(\.presentationMode) var presentationMode
     
     var body: some View {
         NavigationView {
@@ -63,13 +63,14 @@ struct DebugConsoleView: View {
             }
             .navigationTitle("Debug Console")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
-                        dismiss()
-                    }
+            .navigationBarItems(trailing: 
+                Button(action: {
+                    presentationMode.wrappedValue.dismiss()
+                }) {
+                    Text("Done")
+                        .fontWeight(.semibold)
                 }
-            }
+            )
         }
         .navigationViewStyle(StackNavigationViewStyle())
     }
