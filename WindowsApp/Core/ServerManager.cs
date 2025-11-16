@@ -46,6 +46,7 @@ namespace SecondaryScreenHost.Core
             Task.Run(() => AcceptClientsAsync(_cancellationTokenSource.Token));
             
             _screenCapture = new ScreenCaptureService(_settings);
+            _screenCapture.SetFrameCallback(BroadcastFrame);
             _screenCapture.StartCapture();
         }
 

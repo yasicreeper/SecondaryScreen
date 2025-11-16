@@ -14,7 +14,7 @@ namespace SecondaryScreenHost.Core
         private AppSettings _settings;
         private CancellationTokenSource? _cancellationTokenSource;
         private bool _isCapturing;
-        private readonly ServerManager? _serverManager;
+        private Action<ScreenFrame>? _onFrameCaptured;
 
         [DllImport("user32.dll")]
         private static extern IntPtr GetDesktopWindow();
@@ -29,10 +29,14 @@ namespace SecondaryScreenHost.Core
         private static extern bool BitBlt(IntPtr hdcDest, int xDest, int yDest, int wDest, int hDest,
             IntPtr hdcSource, int xSrc, int ySrc, CopyPixelOperation rop);
 
-        public ScreenCaptureService(AppSettings settings, ServerManager? serverManager = null)
+        public ScreenCaptureService(AppSettings settings)
         {
             _settings = settings;
-            _serverManager = serverManager;
+        }
+
+        public void SetFrameCallback(Action<ScreenFrame> callback)
+        {
+            _onFrameCaptured = callback;
         }
 
         public void StartCapture()
@@ -65,7 +69,7 @@ namespace SecondaryScreenHost.Core
                 try
                 {
                     var frame = CaptureScreen();
-                    _serverManager?.BroadcastFrame(frame);
+                    _onFrameCaptured?.Invoke(frame);
                     
                     await Task.Delay(frameDelay, cancellationToken);
                 }
