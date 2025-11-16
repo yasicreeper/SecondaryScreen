@@ -4,6 +4,7 @@ import UIKit
 
 class ConnectionManager: ObservableObject {
     @Published var isConnected = false
+    @Published var isConnecting = false
     @Published var isSearching = false
     @Published var availableDevices: [DeviceInfo] = []
     @Published var currentFrame: UIImage?
@@ -74,6 +75,7 @@ class ConnectionManager: ObservableObject {
     
     func connectManually(to ipAddress: String) {
         errorMessage = nil
+        isConnecting = true
         
         let host = NWEndpoint.Host(ipAddress)
         let port = NWEndpoint.Port(integerLiteral: 8888)
@@ -86,14 +88,19 @@ class ConnectionManager: ObservableObject {
                 switch state {
                 case .ready:
                     self?.isConnected = true
+                    self?.isConnecting = false
                     self?.errorMessage = nil
                     self?.startReceiving()
                     self?.sendDeviceInfo()
                 case .failed(let error):
-                    self?.errorMessage = "Connection failed: \(error.localizedDescription)"
+                    self?.errorMessage = "Cannot connect to \(ipAddress)\n\n✓ Check PC is running the server\n✓ Check both on same WiFi\n✓ Check IP address is correct"
                     self?.isConnected = false
+                    self?.isConnecting = false
                 case .waiting(let error):
-                    self?.errorMessage = "Waiting to connect: \(error.localizedDescription)"
+                    self?.errorMessage = "Waiting to connect..."
+                    self?.isConnecting = true
+                case .cancelled:
+                    self?.isConnecting = false
                 default:
                     break
                 }

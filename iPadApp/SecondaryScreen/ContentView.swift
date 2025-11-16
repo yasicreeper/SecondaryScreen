@@ -69,6 +69,24 @@ struct ConnectionView: View {
                     .font(.title3)
                     .foregroundColor(.white.opacity(0.9))
                 
+                // Instructions box
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("📋 How to Connect:")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                    Text("1. Start the Windows app")
+                    Text("2. Click 'Start Server'")
+                    Text("3. Enter the IP shown below")
+                    Text("4. Tap 'Connect'")
+                }
+                .font(.caption)
+                .foregroundColor(.white.opacity(0.85))
+                .padding()
+                .background(Color.white.opacity(0.15))
+                .cornerRadius(10)
+                .padding(.horizontal, 40)
+                .padding(.top, 10)
+                
                 if connectionManager.isSearching {
                     VStack(spacing: 15) {
                         ProgressView()
@@ -77,7 +95,7 @@ struct ConnectionView: View {
                         Text("Searching for devices...")
                             .foregroundColor(.white)
                     }
-                    .padding(.top, 30)
+                    .padding(.top, 20)
                 } else if !connectionManager.availableDevices.isEmpty {
                     VStack(alignment: .leading, spacing: 15) {
                         Text("Available Devices")
@@ -112,11 +130,17 @@ struct ConnectionView: View {
                 
                 // Manual connection
                 VStack(spacing: 15) {
-                    TextField("Enter IP Address", text: $manualIP)
+                    Text("Enter your PC's IP address:")
+                        .font(.subheadline)
+                        .foregroundColor(.white.opacity(0.9))
+                    
+                    TextField("192.168.0.112", text: $manualIP)
                         .textFieldStyle(RoundedBorderTextFieldStyle())
                         .frame(maxWidth: 300)
                         .autocapitalization(.none)
                         .keyboardType(.decimalPad)
+                        .multilineTextAlignment(.center)
+                        .font(.system(size: 18, weight: .medium))
                     
                     HStack(spacing: 20) {
                         Button(action: {
@@ -124,7 +148,7 @@ struct ConnectionView: View {
                         }) {
                             HStack {
                                 Image(systemName: "magnifyingglass")
-                                Text("Search")
+                                Text("Auto Search")
                             }
                             .frame(width: 140, height: 50)
                             .background(Color.white.opacity(0.3))
@@ -142,8 +166,8 @@ struct ConnectionView: View {
                                 Text("Connect")
                             }
                             .frame(width: 140, height: 50)
-                            .background(Color.white)
-                            .foregroundColor(.blue)
+                            .background(manualIP.isEmpty ? Color.gray : Color.white)
+                            .foregroundColor(manualIP.isEmpty ? .white.opacity(0.5) : .blue)
                             .cornerRadius(25)
                         }
                         .disabled(manualIP.isEmpty)
@@ -151,13 +175,33 @@ struct ConnectionView: View {
                 }
                 .padding(.top, 30)
                 
-                if let error = connectionManager.errorMessage {
-                    Text(error)
-                        .foregroundColor(.red)
-                        .padding()
-                        .background(Color.white.opacity(0.9))
-                        .cornerRadius(10)
-                        .padding(.top, 20)
+                // Connection status/error messages
+                if connectionManager.isConnecting {
+                    HStack(spacing: 10) {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        Text("Connecting...")
+                            .foregroundColor(.white)
+                    }
+                    .padding()
+                    .background(Color.blue.opacity(0.7))
+                    .cornerRadius(10)
+                    .padding(.top, 20)
+                } else if let error = connectionManager.errorMessage {
+                    VStack(spacing: 8) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.title2)
+                            .foregroundColor(.red)
+                        Text(error)
+                            .font(.subheadline)
+                            .foregroundColor(.red)
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding()
+                    .background(Color.white.opacity(0.95))
+                    .cornerRadius(10)
+                    .padding(.horizontal, 30)
+                    .padding(.top, 20)
                 }
             }
             .padding()

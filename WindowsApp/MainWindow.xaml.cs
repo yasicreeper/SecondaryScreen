@@ -67,10 +67,10 @@ namespace SecondaryScreenHost
                 StopServerBtn.IsEnabled = true;
                 
                 var localIP = _serverManager.GetLocalIPAddress();
-                WifiIPText.Text = $"WiFi IP: {localIP}:8888";
+                WifiIPText.Text = $"📶 WiFi IP: {localIP}:8888";
                 
-                UpdateStatus("Server started", Brushes.Orange);
-                UpdateStatusBar("Server running - Waiting for connections...");
+                UpdateStatus("Server started - Ready for connections", Brushes.Green);
+                UpdateStatusBar($"✓ Server running at {localIP}:8888 - Enter this IP on your iPad");
             }
             catch (Exception ex)
             {
