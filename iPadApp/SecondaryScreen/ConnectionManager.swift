@@ -149,9 +149,9 @@ class ConnectionManager: ObservableObject {
         guard let connection = connection else { return }
         
         let data = (message + "\n").data(using: .utf8)!
-        connection.send(content: data, completion: .contentProcessed { error in
+        connection.send(content: data, completion: .contentProcessed { [weak self] error in
             if let error = error {
-                debugLogger.log("Send error: \(error)")
+                self?.debugLogger.log("Send error: \(error)")
             }
         })
     }
@@ -203,8 +203,8 @@ class ConnectionManager: ObservableObject {
         case "settings":
             debugLogger.log("⚙️ Settings received: \(data)")
             // Update settings from server
-            if let resolution = data["resolution"] as? String {
-                // Handle resolution update
+            if data["resolution"] != nil {
+                // Handle resolution update if needed
             }
             if let quality = data["quality"] as? Int {
                 settings.quality = quality > 70 ? 3 : (quality > 40 ? 2 : 1)
@@ -231,7 +231,7 @@ class ConnectionManager: ObservableObject {
         debugLogger.log("📥 Starting to receive frame: \(size) bytes")
         
         // Receive in chunks if needed - TCP may split large frames
-        var frameData = Data()
+        let frameData = Data()
         receiveFrameData(remaining: size, accumulated: frameData, width: width, height: height)
     }
     
@@ -240,7 +240,7 @@ class ConnectionManager: ObservableObject {
         
         connection?.receive(minimumIncompleteLength: 1, maximumLength: chunkSize) { [weak self] data, _, _, error in
             if let error = error {
-                debugLogger.log("❌ Frame chunk receive error: \(error)")
+                self?.debugLogger.log("❌ Frame chunk receive error: \(error)")
                 DispatchQueue.main.async {
                     self?.errorMessage = "Frame receive error: \(error.localizedDescription)"
                 }
@@ -249,7 +249,7 @@ class ConnectionManager: ObservableObject {
             }
             
             guard let data = data else {
-                debugLogger.log("❌ No data received")
+                self?.debugLogger.log("❌ No data received")
                 self?.receiveMessage()
                 return
             }
@@ -258,22 +258,22 @@ class ConnectionManager: ObservableObject {
             newAccumulated.append(data)
             let newRemaining = remaining - data.count
             
-            debugLogger.log("📦 Received chunk: \(data.count) bytes, remaining: \(newRemaining)")
+            self?.debugLogger.log("📦 Received chunk: \(data.count) bytes, remaining: \(newRemaining)")
             
             if newRemaining > 0 {
                 // More data needed
                 self?.receiveFrameData(remaining: newRemaining, accumulated: newAccumulated, width: width, height: height)
             } else {
                 // Complete frame received
-                debugLogger.log("✅ Complete frame received: \(newAccumulated.count) bytes")
+                self?.debugLogger.log("✅ Complete frame received: \(newAccumulated.count) bytes")
                 
                 if let image = UIImage(data: newAccumulated) {
-                    DispatchQueue.main.async {
+                    DispatchQueue.main.async { [weak self] in
                         self?.currentFrame = image
-                        debugLogger.log("🖼️ Image decoded successfully!")
+                        self?.debugLogger.log("🖼️ Image decoded successfully!")
                     }
                 } else {
-                    debugLogger.log("❌ Failed to decode image from \(newAccumulated.count) bytes")
+                    self?.debugLogger.log("❌ Failed to decode image from \(newAccumulated.count) bytes")
                 }
                 
                 // Continue receiving messages
