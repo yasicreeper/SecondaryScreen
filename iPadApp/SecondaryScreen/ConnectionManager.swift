@@ -164,6 +164,13 @@ class ConnectionManager: ObservableObject {
         connection?.receive(minimumIncompleteLength: 1, maximumLength: 65536) { [weak self] data, _, isComplete, error in
             if let data = data, !data.isEmpty {
                 self?.debugLogger.log("📨 Received \(data.count) bytes")
+                
+                // CRITICAL: Prevent buffer overflow - limit to 10MB
+                if let bufferSize = self?.receiveBuffer.count, bufferSize > 10_000_000 {
+                    self?.debugLogger.log("⚠️ Buffer overflow! Size: \(bufferSize) bytes - clearing old data")
+                    self?.receiveBuffer.removeAll()
+                }
+                
                 self?.receiveBuffer.append(data)
                 self?.processReceivedData()
             }
@@ -274,16 +281,19 @@ class ConnectionManager: ObservableObject {
                 // Complete frame received
                 self?.debugLogger.log("✅ Complete frame received: \(newAccumulated.count) bytes")
                 
-                if let image = UIImage(data: newAccumulated) {
-                    DispatchQueue.main.async { [weak self] in
-                        self?.currentFrame = image
-                        self?.debugLogger.log("🖼️ Image decoded successfully!")
+                // Decode image on background thread to prevent blocking
+                DispatchQueue.global(qos: .userInteractive).async { [weak self] in
+                    if let image = UIImage(data: newAccumulated) {
+                        DispatchQueue.main.async {
+                            self?.currentFrame = image
+                            self?.debugLogger.log("🖼️ Image decoded and displayed!")
+                        }
+                    } else {
+                        self?.debugLogger.log("❌ Failed to decode image from \(newAccumulated.count) bytes")
                     }
-                } else {
-                    self?.debugLogger.log("❌ Failed to decode image from \(newAccumulated.count) bytes")
                 }
                 
-                // Continue receiving messages
+                // Continue receiving messages immediately without waiting for decode
                 self?.receiveMessage()
             }
         }

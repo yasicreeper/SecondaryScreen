@@ -19,8 +19,8 @@ namespace SecondaryScreenHost.Models
     public class AppSettings
     {
         public string Resolution { get; set; } = "1024x768";
-        public int Quality { get; set; } = 85;
-        public int FrameRate { get; set; } = 30;
+        public int Quality { get; set; } = 60;  // Reduced from 85 for smaller file sizes
+        public int FrameRate { get; set; } = 15;  // Reduced from 30 to prevent buffer overflow
         public bool AutoStart { get; set; } = false;
         public bool TouchInputEnabled { get; set; } = true;
         public bool AutoConnect { get; set; } = true;

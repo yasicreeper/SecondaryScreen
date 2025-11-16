@@ -121,14 +121,14 @@
                             <TextBlock Text="Quality:" Grid.Row="1" Grid.Column="0" 
                                        VerticalAlignment="Center" Margin="0,0,0,15"/>
                             <Slider x:Name="QualitySlider" Grid.Row="1" Grid.Column="1" 
-                                    Minimum="1" Maximum="100" Value="85" Width="300" 
+                                    Minimum="1" Maximum="100" Value="60" Width="300" 
                                     HorizontalAlignment="Left" Margin="0,0,0,15"
                                     ValueChanged="QualitySlider_ValueChanged"/>
 
                             <TextBlock Text="Frame Rate (FPS):" Grid.Row="2" Grid.Column="0" 
                                        VerticalAlignment="Center" Margin="0,0,0,15"/>
                             <Slider x:Name="FpsSlider" Grid.Row="2" Grid.Column="1" 
-                                    Minimum="15" Maximum="60" Value="30" Width="300" 
+                                    Minimum="10" Maximum="30" Value="15" Width="300" 
                                     HorizontalAlignment="Left" Margin="0,0,0,15"
                                     ValueChanged="FpsSlider_ValueChanged"/>
 
