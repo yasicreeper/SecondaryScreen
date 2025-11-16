@@ -44,7 +44,7 @@ namespace SecondaryScreenHost.Core
             _isRunning = true;
 
             StatusChanged?.Invoke(this, "Server started");
-            Console.WriteLine("🚀 Server started on port 8888");
+            Console.WriteLine($"🚀 Server started on port {_settings.Port}");
 
             Task.Run(() => AcceptClientsAsync(_cancellationTokenSource.Token));
             
@@ -207,6 +207,11 @@ namespace SecondaryScreenHost.Core
                 }
             }
             return "127.0.0.1";
+        }
+
+        public int GetPort()
+        {
+            return _settings.Port;
         }
 
         public List<DeviceInfo> GetAvailableDevices()

@@ -84,10 +84,10 @@ class ConnectionManager: ObservableObject {
         errorMessage = nil
         isConnecting = true
         
-        debugLogger.log("🔌 Connecting to \(ipAddress):8888...")
+        debugLogger.log("🔌 Connecting to \(ipAddress):4000...")
         
         let host = NWEndpoint.Host(ipAddress)
-        let port = NWEndpoint.Port(integerLiteral: 8888)
+        let port = NWEndpoint.Port(integerLiteral: 4000)
         
         let connection = NWConnection(host: host, port: port, using: .tcp)
         self.connection = connection

@@ -25,7 +25,7 @@ namespace SecondaryScreenHost.Models
         public bool TouchInputEnabled { get; set; } = true;
         public bool AutoConnect { get; set; } = true;
         public string Orientation { get; set; } = "Auto";
-        public int Port { get; set; } = 8888;
+        public int Port { get; set; } = 4000;
     }
 
     public class ScreenFrame

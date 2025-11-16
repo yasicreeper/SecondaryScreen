@@ -76,10 +76,11 @@ namespace SecondaryScreenHost
                 StopServerBtn.IsEnabled = true;
                 
                 var localIP = _serverManager.GetLocalIPAddress();
-                WifiIPText.Text = $"📶 WiFi IP: {localIP}:8888";
+                var port = _serverManager.GetPort();
+                WifiIPText.Text = $"📶 WiFi IP: {localIP}:{port}";
                 
                 UpdateStatus("Server started - Ready for connections", Brushes.Green);
-                UpdateStatusBar($"✓ Server running at {localIP}:8888 - Enter this IP on your iPad");
+                UpdateStatusBar($"✓ Server running at {localIP}:{port} - Enter this IP on your iPad");
             }
             catch (Exception ex)
             {
@@ -198,7 +199,7 @@ namespace SecondaryScreenHost
                 TouchInputEnabled = TouchInputCheck.IsChecked == true,
                 AutoConnect = AutoConnectCheck.IsChecked == true,
                 Orientation = (OrientationCombo.SelectedItem as ComboBoxItem)?.Content.ToString() ?? "Auto",
-                Port = 8888
+                Port = 4000
             };
             
             _settingsManager.SaveSettings(settings);
@@ -279,7 +280,7 @@ namespace SecondaryScreenHost
                 TouchInputEnabled = TouchInputCheck.IsChecked == true,
                 AutoConnect = AutoConnectCheck.IsChecked == true,
                 Orientation = (OrientationCombo.SelectedItem as ComboBoxItem)?.Content.ToString() ?? "Auto",
-                Port = 8888
+                Port = 4000
             };
 
             _serverManager.ApplySettings(settings);
