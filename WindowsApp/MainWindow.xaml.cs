@@ -117,7 +117,7 @@ namespace SecondaryScreenHost
 
         private void ResolutionCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (ResolutionCombo.SelectedItem is ComboBoxItem item)
+            if (IsLoaded && ResolutionCombo.SelectedItem is ComboBoxItem item)
             {
                 UpdateStatusBar($"Resolution set to {item.Content}");
             }
@@ -125,7 +125,7 @@ namespace SecondaryScreenHost
 
         private void QualitySlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
-            if (IsLoaded)
+            if (IsLoaded && StatusBarText != null)
             {
                 UpdateStatusBar($"Quality set to {(int)e.NewValue}%");
             }
@@ -133,7 +133,7 @@ namespace SecondaryScreenHost
 
         private void FpsSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
-            if (IsLoaded)
+            if (IsLoaded && StatusBarText != null)
             {
                 UpdateStatusBar($"Frame rate set to {(int)e.NewValue} FPS");
             }
@@ -141,7 +141,7 @@ namespace SecondaryScreenHost
 
         private void AutoStartCheck_Changed(object sender, RoutedEventArgs e)
         {
-            if (IsLoaded)
+            if (IsLoaded && StatusBarText != null)
             {
                 UpdateStatusBar($"Auto-start {(AutoStartCheck.IsChecked == true ? "enabled" : "disabled")}");
             }
@@ -149,7 +149,7 @@ namespace SecondaryScreenHost
 
         private void TouchInputCheck_Changed(object sender, RoutedEventArgs e)
         {
-            if (IsLoaded)
+            if (IsLoaded && StatusBarText != null)
             {
                 UpdateStatusBar($"Touch input {(TouchInputCheck.IsChecked == true ? "enabled" : "disabled")}");
             }
@@ -157,7 +157,7 @@ namespace SecondaryScreenHost
 
         private void AutoConnectCheck_Changed(object sender, RoutedEventArgs e)
         {
-            if (IsLoaded)
+            if (IsLoaded && StatusBarText != null)
             {
                 UpdateStatusBar($"Auto-connect {(AutoConnectCheck.IsChecked == true ? "enabled" : "disabled")}");
             }
@@ -165,7 +165,7 @@ namespace SecondaryScreenHost
 
         private void OrientationCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (IsLoaded && OrientationCombo.SelectedItem is ComboBoxItem item)
+            if (IsLoaded && OrientationCombo.SelectedItem is ComboBoxItem item && StatusBarText != null)
             {
                 UpdateStatusBar($"Orientation set to {item.Content}");
             }
