@@ -184,8 +184,11 @@ class ConnectionManager: ObservableObject {
     }
     
     private func handleMessage(type: String, data: [String: Any]) {
+        print("📥 Received message type: \(type)")
+        
         switch type {
         case "settings":
+            print("⚙️ Settings received: \(data)")
             // Update settings from server
             if let resolution = data["resolution"] as? String {
                 // Handle resolution update
@@ -199,25 +202,40 @@ class ConnectionManager: ObservableObject {
             if let dataSize = data["dataSize"] as? Int,
                let width = data["width"] as? Int,
                let height = data["height"] as? Int {
+                print("🖼️ Frame header: \(width)x\(height), size: \(dataSize) bytes")
                 receiveFrame(size: dataSize, width: width, height: height)
+            } else {
+                print("❌ Invalid frame header: \(data)")
             }
             
         default:
+            print("❓ Unknown message type: \(type)")
             break
         }
     }
     
     private func receiveFrame(size: Int, width: Int, height: Int) {
         connection?.receive(minimumIncompleteLength: size, maximumLength: size) { [weak self] data, _, _, error in
-            if let data = data, let image = UIImage(data: data) {
+            if let error = error {
+                print("Frame receive error: \(error)")
                 DispatchQueue.main.async {
-                    self?.currentFrame = image
+                    self?.errorMessage = "Frame receive error: \(error.localizedDescription)"
+                }
+                return
+            }
+            
+            if let data = data {
+                if let image = UIImage(data: data) {
+                    DispatchQueue.main.async {
+                        self?.currentFrame = image
+                    }
+                } else {
+                    print("Failed to decode image from \(data.count) bytes")
                 }
             }
             
-            if error == nil {
-                self?.receiveMessage()
-            }
+            // Continue receiving messages
+            self?.receiveMessage()
         }
     }
     
