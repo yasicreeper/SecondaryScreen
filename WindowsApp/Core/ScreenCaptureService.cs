@@ -46,6 +46,7 @@ namespace SecondaryScreenHost.Core
             _isCapturing = true;
             _cancellationTokenSource = new CancellationTokenSource();
             
+            Console.WriteLine($"🎬 Starting capture loop at {_settings.FrameRate} FPS");
             Task.Run(() => CaptureLoop(_cancellationTokenSource.Token));
         }
 
@@ -63,12 +64,22 @@ namespace SecondaryScreenHost.Core
         private async Task CaptureLoop(CancellationToken cancellationToken)
         {
             var frameDelay = 1000 / _settings.FrameRate;
+            var frameCount = 0;
+            
+            Console.WriteLine($"⚡ Capture loop started, delay: {frameDelay}ms");
             
             while (!cancellationToken.IsCancellationRequested && _isCapturing)
             {
                 try
                 {
                     var frame = CaptureScreen();
+                    frameCount++;
+                    
+                    if (frameCount % 30 == 0) // Log every 30 frames (about once per second at 30fps)
+                    {
+                        Console.WriteLine($"📸 Captured frame #{frameCount}: {frame.Width}x{frame.Height}, {frame.ImageData.Length} bytes");
+                    }
+                    
                     _onFrameCaptured?.Invoke(frame);
                     
                     await Task.Delay(frameDelay, cancellationToken);
@@ -79,10 +90,12 @@ namespace SecondaryScreenHost.Core
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Capture error: {ex.Message}");
+                    Console.WriteLine($"❌ Capture error: {ex.Message}");
                     await Task.Delay(100, cancellationToken);
                 }
             }
+            
+            Console.WriteLine($"🛑 Capture loop stopped after {frameCount} frames");
         }
 
         private ScreenFrame CaptureScreen()

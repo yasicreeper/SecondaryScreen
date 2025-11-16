@@ -44,12 +44,14 @@ namespace SecondaryScreenHost.Core
             _isRunning = true;
 
             StatusChanged?.Invoke(this, "Server started");
+            Console.WriteLine("🚀 Server started on port 8888");
 
             Task.Run(() => AcceptClientsAsync(_cancellationTokenSource.Token));
             
             _screenCapture = new ScreenCaptureService(_settings);
             _screenCapture.SetFrameCallback(BroadcastFrame);
             _screenCapture.StartCapture();
+            Console.WriteLine("📹 Screen capture started");
             
             // Start USB device monitoring
             _usbCheckTimer = new System.Threading.Timer(CheckUSBDevices, null, 0, 5000);
@@ -131,6 +133,7 @@ namespace SecondaryScreenHost.Core
                     var client = new ClientConnection(tcpClient, this);
                     
                     _clients.Add(client);
+                    Console.WriteLine($"✅ Client connected. Total clients: {_clients.Count}");
                     
                     var deviceInfo = new DeviceInfo
                     {
@@ -216,14 +219,24 @@ namespace SecondaryScreenHost.Core
 
         public void BroadcastFrame(ScreenFrame frame)
         {
+            var clientCount = _clients.Count;
+            if (clientCount == 0)
+            {
+                // Uncomment for verbose logging: Console.WriteLine("⚠️ No clients to broadcast to");
+                return;
+            }
+            
+            Console.WriteLine($"📤 Broadcasting frame: {frame.Width}x{frame.Height}, {frame.ImageData.Length} bytes to {clientCount} client(s)");
+            
             foreach (var client in _clients.ToList())
             {
                 try
                 {
                     client.SendFrame(frame);
                 }
-                catch
+                catch (Exception ex)
                 {
+                    Console.WriteLine($"❌ Error sending to client: {ex.Message}");
                     // Client disconnected, will be handled by ClientConnection
                 }
             }
@@ -243,6 +256,7 @@ namespace SecondaryScreenHost.Core
         private readonly TcpClient _tcpClient;
         private readonly NetworkStream _stream;
         private readonly ServerManager _server;
+        private int _framesSent = 0;
 
         public DeviceInfo? DeviceInfo { get; set; }
 
@@ -338,14 +352,21 @@ namespace SecondaryScreenHost.Core
                 var headerJson = JsonConvert.SerializeObject(header);
                 var headerBytes = Encoding.UTF8.GetBytes(headerJson + "\n");
                 
+                _framesSent++;
+                if (_framesSent == 1 || _framesSent % 100 == 0)
+                {
+                    Console.WriteLine($"📨 Frame #{_framesSent}: {headerJson}");
+                }
+                
                 _stream.Write(headerBytes, 0, headerBytes.Length);
                 
                 // Send frame data
                 _stream.Write(frame.ImageData, 0, frame.ImageData.Length);
                 _stream.Flush();
             }
-            catch
+            catch (Exception ex)
             {
+                Console.WriteLine($"❌ SendFrame error: {ex.Message}");
                 Disconnect();
             }
         }

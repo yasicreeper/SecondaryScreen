@@ -215,27 +215,57 @@ class ConnectionManager: ObservableObject {
     }
     
     private func receiveFrame(size: Int, width: Int, height: Int) {
-        connection?.receive(minimumIncompleteLength: size, maximumLength: size) { [weak self] data, _, _, error in
+        print("📥 Starting to receive frame: \(size) bytes")
+        
+        // Receive in chunks if needed - TCP may split large frames
+        var frameData = Data()
+        receiveFrameData(remaining: size, accumulated: frameData, width: width, height: height)
+    }
+    
+    private func receiveFrameData(remaining: Int, accumulated: Data, width: Int, height: Int) {
+        let chunkSize = min(remaining, 65536) // Read up to 64KB at a time
+        
+        connection?.receive(minimumIncompleteLength: 1, maximumLength: chunkSize) { [weak self] data, _, _, error in
             if let error = error {
-                print("Frame receive error: \(error)")
+                print("❌ Frame chunk receive error: \(error)")
                 DispatchQueue.main.async {
                     self?.errorMessage = "Frame receive error: \(error.localizedDescription)"
                 }
+                self?.receiveMessage()
                 return
             }
             
-            if let data = data {
-                if let image = UIImage(data: data) {
-                    DispatchQueue.main.async {
-                        self?.currentFrame = image
-                    }
-                } else {
-                    print("Failed to decode image from \(data.count) bytes")
-                }
+            guard let data = data else {
+                print("❌ No data received")
+                self?.receiveMessage()
+                return
             }
             
-            // Continue receiving messages
-            self?.receiveMessage()
+            var newAccumulated = accumulated
+            newAccumulated.append(data)
+            let newRemaining = remaining - data.count
+            
+            print("📦 Received chunk: \(data.count) bytes, remaining: \(newRemaining)")
+            
+            if newRemaining > 0 {
+                // More data needed
+                self?.receiveFrameData(remaining: newRemaining, accumulated: newAccumulated, width: width, height: height)
+            } else {
+                // Complete frame received
+                print("✅ Complete frame received: \(newAccumulated.count) bytes")
+                
+                if let image = UIImage(data: newAccumulated) {
+                    DispatchQueue.main.async {
+                        self?.currentFrame = image
+                        print("🖼️ Image decoded successfully!")
+                    }
+                } else {
+                    print("❌ Failed to decode image from \(newAccumulated.count) bytes")
+                }
+                
+                // Continue receiving messages
+                self?.receiveMessage()
+            }
         }
     }
     
