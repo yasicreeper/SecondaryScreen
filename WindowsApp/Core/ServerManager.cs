@@ -7,6 +7,7 @@ using System.Net.NetworkInformation;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Management;
 using Newtonsoft.Json;
 using SecondaryScreenHost.Models;
 
@@ -21,6 +22,7 @@ namespace SecondaryScreenHost.Core
         private CancellationTokenSource? _cancellationTokenSource;
         private ScreenCaptureService? _screenCapture;
         private bool _isRunning;
+        private System.Threading.Timer? _usbCheckTimer;
 
         public event EventHandler<DeviceInfo>? DeviceConnected;
         public event EventHandler<DeviceInfo>? DeviceDisconnected;
@@ -48,6 +50,56 @@ namespace SecondaryScreenHost.Core
             _screenCapture = new ScreenCaptureService(_settings);
             _screenCapture.SetFrameCallback(BroadcastFrame);
             _screenCapture.StartCapture();
+            
+            // Start USB device monitoring
+            _usbCheckTimer = new System.Threading.Timer(CheckUSBDevices, null, 0, 5000);
+        }
+
+        private void CheckUSBDevices(object? state)
+        {
+            try
+            {
+                var usbDevices = GetUSBDevices();
+                var hasAppleDevice = usbDevices.Any(d => 
+                    d.Contains("Apple", StringComparison.OrdinalIgnoreCase) ||
+                    d.Contains("iPad", StringComparison.OrdinalIgnoreCase) ||
+                    d.Contains("iPhone", StringComparison.OrdinalIgnoreCase));
+                
+                if (hasAppleDevice)
+                {
+                    StatusChanged?.Invoke(this, "USB: Apple device detected");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"USB check error: {ex.Message}");
+            }
+        }
+
+        private List<string> GetUSBDevices()
+        {
+            var devices = new List<string>();
+            
+            try
+            {
+                using (var searcher = new ManagementObjectSearcher("SELECT * FROM Win32_PnPEntity WHERE PNPClass='USB' OR PNPClass='WPD'"))
+                {
+                    foreach (ManagementObject device in searcher.Get())
+                    {
+                        var name = device["Name"]?.ToString();
+                        if (!string.IsNullOrEmpty(name))
+                        {
+                            devices.Add(name);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error getting USB devices: {ex.Message}");
+            }
+            
+            return devices;
         }
 
         public void StopServer()
@@ -58,6 +110,7 @@ namespace SecondaryScreenHost.Core
             _cancellationTokenSource?.Cancel();
             _listener?.Stop();
             _screenCapture?.StopCapture();
+            _usbCheckTimer?.Dispose();
 
             foreach (var client in _clients.ToList())
             {
@@ -181,6 +234,7 @@ namespace SecondaryScreenHost.Core
             StopServer();
             _cancellationTokenSource?.Dispose();
             _screenCapture?.Dispose();
+            _usbCheckTimer?.Dispose();
         }
     }
 

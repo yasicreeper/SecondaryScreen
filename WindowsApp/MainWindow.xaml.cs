@@ -222,6 +222,19 @@ namespace SecondaryScreenHost
             Dispatcher.Invoke(() =>
             {
                 UpdateStatusBar(status);
+                
+                // Update USB status if message contains USB info
+                if (status.Contains("USB:", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (status.Contains("detected", StringComparison.OrdinalIgnoreCase))
+                    {
+                        UsbStatusText.Text = "USB: Apple device connected";
+                    }
+                    else
+                    {
+                        UsbStatusText.Text = "USB: Not connected";
+                    }
+                }
             });
         }
 
