@@ -11,7 +11,7 @@ workflows:
         XCODE_PROJECT: "iPadApp/SecondaryScreen.xcodeproj"
         XCODE_SCHEME: "SecondaryScreen"
         GITHUB_TOKEN: $GITHUB_TOKEN
-      xcode: 15.0
+      xcode: latest
     scripts:
       - name: Set up build environment
         script: |
@@ -386,7 +386,7 @@ workflows:
         XCODE_PROJECT: "iPadApp/SecondaryScreen.xcodeproj"
         XCODE_SCHEME: "SecondaryScreen"
         GITHUB_TOKEN: $GITHUB_TOKEN
-      xcode: 15.0
+      xcode: latest
     scripts:
       - name: Set up build environment
         script: |
