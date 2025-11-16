@@ -198,6 +198,12 @@ class ConnectionManager: ObservableObject {
             
             debugLogger.log("📦 Found message: \(messageData.count) bytes")
             
+            // Show first 200 chars of message for debugging
+            if let messageString = String(data: messageData, encoding: .utf8) {
+                let preview = String(messageString.prefix(200))
+                debugLogger.log("📄 Message preview: \(preview)")
+            }
+            
             if let json = try? JSONSerialization.jsonObject(with: messageData) as? [String: Any],
                let type = json["type"] as? String {
                 
@@ -206,6 +212,9 @@ class ConnectionManager: ObservableObject {
                 }
             } else {
                 debugLogger.log("❌ Failed to parse JSON from message")
+                // Show hex dump of first 50 bytes
+                let hexDump = messageData.prefix(50).map { String(format: "%02x", $0) }.joined(separator: " ")
+                debugLogger.log("🔍 Hex dump: \(hexDump)")
             }
         }
     }
