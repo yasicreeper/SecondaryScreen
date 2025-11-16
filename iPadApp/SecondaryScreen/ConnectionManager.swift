@@ -163,28 +163,33 @@ class ConnectionManager: ObservableObject {
     private func receiveMessage() {
         connection?.receive(minimumIncompleteLength: 1, maximumLength: 65536) { [weak self] data, _, isComplete, error in
             if let data = data, !data.isEmpty {
+                self?.debugLogger.log("📨 Received \(data.count) bytes")
                 self?.receiveBuffer.append(data)
                 self?.processReceivedData()
             }
             
             if let error = error {
+                self?.debugLogger.log("❌ Receive error: \(error.localizedDescription)")
                 DispatchQueue.main.async {
                     self?.errorMessage = "Receive error: \(error.localizedDescription)"
                 }
                 return
             }
             
-            if !isComplete {
-                self?.receiveMessage()
-            }
+            // Always continue receiving unless there was an error
+            self?.receiveMessage()
         }
     }
     
     private func processReceivedData() {
         // Look for newline-delimited JSON messages
+        debugLogger.log("🔍 Processing buffer: \(receiveBuffer.count) bytes")
+        
         while let newlineRange = receiveBuffer.range(of: "\n".data(using: .utf8)!) {
             let messageData = receiveBuffer.subdata(in: 0..<newlineRange.lowerBound)
             receiveBuffer.removeSubrange(0..<newlineRange.upperBound)
+            
+            debugLogger.log("📦 Found message: \(messageData.count) bytes")
             
             if let json = try? JSONSerialization.jsonObject(with: messageData) as? [String: Any],
                let type = json["type"] as? String {
@@ -192,6 +197,8 @@ class ConnectionManager: ObservableObject {
                 DispatchQueue.main.async { [weak self] in
                     self?.handleMessage(type: type, data: json)
                 }
+            } else {
+                debugLogger.log("❌ Failed to parse JSON from message")
             }
         }
     }
