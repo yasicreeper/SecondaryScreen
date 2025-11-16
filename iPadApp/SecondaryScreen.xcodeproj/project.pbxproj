@@ -11,6 +11,8 @@
 		AA003 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA004 /* ContentView.swift */; };
 		AA005 /* ConnectionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA006 /* ConnectionManager.swift */; };
 		AA007 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AA008 /* Assets.xcassets */; };
+		DD001 /* DebugLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD002 /* DebugLogger.swift */; };
+		DD003 /* DebugConsoleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD004 /* DebugConsoleView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -19,6 +21,8 @@
 		AA006 /* ConnectionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionManager.swift; sourceTree = "<group>"; };
 		AA008 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		AA009 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		DD002 /* DebugLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugLogger.swift; sourceTree = "<group>"; };
+		DD004 /* DebugConsoleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugConsoleView.swift; sourceTree = "<group>"; };
 		BBB1 /* SecondaryScreen.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SecondaryScreen.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -47,6 +51,8 @@
 				AA002 /* SecondaryScreenApp.swift */,
 				AA004 /* ContentView.swift */,
 				AA006 /* ConnectionManager.swift */,
+				DD002 /* DebugLogger.swift */,
+				DD004 /* DebugConsoleView.swift */,
 				AA008 /* Assets.xcassets */,
 				AA009 /* Info.plist */,
 			);
@@ -133,6 +139,8 @@
 				AA001 /* SecondaryScreenApp.swift in Sources */,
 				AA003 /* ContentView.swift in Sources */,
 				AA005 /* ConnectionManager.swift in Sources */,
+				DD001 /* DebugLogger.swift in Sources */,
+				DD003 /* DebugConsoleView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
