@@ -256,6 +256,7 @@ struct ScreenDisplayView: View {
     @EnvironmentObject var connectionManager: ConnectionManager
     @State private var showDisconnectButton = true
     @State private var hideButtonTimer: Timer?
+    @State private var showDebugConsole = false
     
     var body: some View {
         ZStack {
@@ -277,8 +278,8 @@ struct ScreenDisplayView: View {
                 }
             }
             
-            // Disconnect button
-            if showDisconnectButton {
+            // Disconnect and Debug Console buttons - ALWAYS VISIBLE when waiting for data
+            if showDisconnectButton || connectionManager.currentFrame == nil {
                 VStack {
                     HStack {
                         Button(action: {
@@ -290,9 +291,25 @@ struct ScreenDisplayView: View {
                                 .padding()
                                 .background(Color.red.opacity(0.8))
                                 .clipShape(Circle())
+                                .shadow(radius: 5)
                         }
                         .padding()
+                        
                         Spacer()
+                        
+                        // Debug console button - always visible when waiting
+                        Button(action: {
+                            showDebugConsole = true
+                        }) {
+                            Image(systemName: "terminal")
+                                .font(.title)
+                                .foregroundColor(.white)
+                                .padding()
+                                .background(Color.green.opacity(0.9))
+                                .clipShape(Circle())
+                                .shadow(radius: 5)
+                        }
+                        .padding()
                     }
                     Spacer()
                 }
@@ -307,6 +324,10 @@ struct ScreenDisplayView: View {
         }
         .onAppear {
             resetHideTimer()
+        }
+        .fullScreenCover(isPresented: $showDebugConsole) {
+            DebugConsoleView(isPresented: $showDebugConsole)
+                .environmentObject(connectionManager)
         }
     }
     
